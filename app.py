@@ -45,7 +45,26 @@ talk_id = st.session_state["talk_id"]
 
 if 'is_interview_ongoing' not in st.session_state:
     st.session_state['is_interview_ongoing'] = False
+###　ユーザー設定
+if "prompt" not in  st.session_state:
+    #評価基準によって質問の深掘り方が異なる可能性あり
+    template = """You are an interviewer. Ask the following questions and after each answer, ask more deeply according to it.
+    {questions}
 
+    Current conversation:
+    {history}
+    Interviewer: {input}
+    Interviewee: """
+
+    st.session_state["prompt"] = PromptTemplate(
+        input_variables=["questions","history","input"],
+        template=template
+    )
+
+if "question" not in  st.session_state:
+    company = ''
+    n_query = 5
+    st.session_state["question"] = generate_questions(company, n_query)
 
 def on_interview_finished():
         logger.warning("面接を終了")
@@ -57,7 +76,6 @@ if st.session_state['is_interview_ongoing']:
     st.button("面接終了", on_click=on_interview_finished)
 elif not st.session_state['is_interview_finished']:
     if st.button("面接を開始する"):
-        st.write("Settings confirmed")
         if "company_name" in st.session_state and "position" in st.session_state and "desired_candidate_character" in st.session_state and "additional_info" in st.session_state:
             recruitInfo = {
                 "company_name": st.session_state["company_name"],
@@ -85,8 +103,7 @@ if not st.session_state['is_interview_finished']:
             "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
         },
         desired_playing_state=st.session_state['is_interview_ongoing']
-        
-)
+        )
 
 
     if main_webrtc_ctx.state.playing:
@@ -109,51 +126,51 @@ if not st.session_state['is_interview_finished']:
         st.write(st.session_state['is_recording'])
         
 
-    while True:
-        if webrtc_ctx.state.playing:
-            try:
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
-            except queue.Empty:
-                    logger.warning("Queue is empty. Abort.")
-                    break
-            for audio_frame in audio_frames:
-                    sound = pydub.AudioSegment(
-                    data=audio_frame.to_ndarray().tobytes(),
-                    sample_width=audio_frame.format.bytes,
-                    frame_rate=audio_frame.sample_rate,
-                    channels=len(audio_frame.layout.channels),
-                    )
-                    st.session_state["sound_chunk"] += sound
+        while True:
+            if webrtc_ctx.state.playing:
+                try:
+                    audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                except queue.Empty:
+                        logger.warning("Queue is empty. Abort.")
+                        break
+                for audio_frame in audio_frames:
+                        sound = pydub.AudioSegment(
+                        data=audio_frame.to_ndarray().tobytes(),
+                        sample_width=audio_frame.format.bytes,
+                        frame_rate=audio_frame.sample_rate,
+                        channels=len(audio_frame.layout.channels),
+                        )
+                        st.session_state["sound_chunk"] += sound
+            else:
+                logger.warning("Audio receiver is not set. Abort.")
+                break
+
+        if len(st.session_state["sound_chunk"]) > 0:
+            user_text = speech_to_text(st.session_state["sound_chunk"])
+            state = get_state()
+            generate_response(st.session_state["prompt"], st.session_state["questions"], user_text, state)
+            logger.warning("Audio file is saved.")
+            sound_chunk = pydub.AudioSegment.empty()
+            st.session_state["talk_id"] = str(uuid.uuid4())
         else:
-            logger.warning("Audio receiver is not set. Abort.")
-            break
-
-    if len(st.session_state["sound_chunk"]) > 0:
-        user_text = speech_to_text(st.session_state["sound_chunk"])
-        state = get_state()
-        generate_response(st.session_state["prompt"], st.session_state["questions"], user_text, state)
-        logger.warning("Audio file is saved.")
-        sound_chunk = pydub.AudioSegment.empty()
-        st.session_state["talk_id"] = str(uuid.uuid4())
+            print("No sound is recorded.")
     else:
-        print("No sound is recorded.")
-else:
-    if st.session_state['is_interview_finished']: 
-        st.write("面接終了です！以下が評価でやんす")
-    else: 
-        company_name = st.text_input("Company Name", value="")
-        position = st.text_input("Position", value="")
-        desired_candidate_character = st.text_area("Desired Candidate Character", value="")
-        additional_info = st.text_area("Additional Info", value="")
+        if st.session_state['is_interview_finished']: 
+            st.write("面接終了です！評価でやんす")
+        else: 
+            company_name = st.text_input("Company Name", value="")
+            position = st.text_input("Position", value="")
+            desired_candidate_character = st.text_area("Desired Candidate Character", value="")
+            additional_info = st.text_area("Additional Info", value="")
 
-        # Update session state with the input values if needed
-        if company_name:
-            st.session_state["company_name"] = company_name
-        if position:
-            st.session_state["position"] = position
-        if desired_candidate_character:
-            st.session_state["desired_candidate_character"] = desired_candidate_character
-        if additional_info:
-            st.session_state["additional_info"] = additional_info
+            # Update session state with the input values if needed
+            if company_name:
+                st.session_state["company_name"] = company_name
+            if position:
+                st.session_state["position"] = position
+            if desired_candidate_character:
+                st.session_state["desired_candidate_character"] = desired_candidate_character
+            if additional_info:
+                st.session_state["additional_info"] = additional_info
 
-    
+
