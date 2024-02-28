@@ -25,7 +25,8 @@ def evaluate(unique_rubric):#generate_evalの出力を代入
     rubric = unique_rubric + common_rubric
     
     template = """You are a specialist of job interview specialist. I would like you to mark an interview. Evaluate the interview from each point in the following rubric and give a grade and feedback on each item with an integer from 0 to 10 points.
-    Interview:
+    #format;
+    #Interview:
     {history}
     """
     + "\n#rubric:\n{rubric}\n"

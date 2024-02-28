@@ -26,6 +26,8 @@ from interview_chat import generate_response
 from interview_eval import evaluate
 import base64
 import streamlit.components.v1 as stc
+import pandas as pd
+
 
 
 from states import StatesObject
@@ -48,10 +50,8 @@ if "talk_id" not in st.session_state:
     st.write("hello")
     st.session_state["sound_chunk"] = pydub.AudioSegment.empty()
     st.session_state["is_recording"] = False
-    st.session_state["is_interview_finished"] = False#移したほうがいいかも
-    st.session_state["count"] = 0
+    st.session_state["is_interview_finished"] = False
 talk_id = st.session_state["talk_id"]
-st.write(st.session_state["talk_id"])
 
 
 if 'is_interview_ongoing' not in st.session_state:
@@ -70,11 +70,11 @@ def on_interview_finished():
         # st.session_state['eval'] = evaluate(rubric, examples=None)
         
 if st.session_state['is_interview_ongoing']:
-    st.button("面接終了", on_click=on_interview_finished)
+    st.button("Finish the Interview!", on_click=on_interview_finished)
 
 
 elif not st.session_state['is_interview_finished']:
-    if st.button("面接を開始する"):
+    if st.button("Start an Interview!"):
         if "company_name" in st.session_state and "position" in st.session_state and "desired_candidate_character" in st.session_state and "additional_info" in st.session_state:
             recruitInfo = {
                 "company_name": st.session_state["company_name"],
@@ -85,10 +85,8 @@ elif not st.session_state['is_interview_finished']:
 
             st.session_state["questions"] = generate_questions(recruitInfo, n_query=3)
             # unique_criteria = generate_eval(st.session_state["company_attributes"], examples=None)#評価基準を生成する
+    
             
-
-            
-            st.write(st.session_state["questions"])
             ###　ユーザー設定
             if "questions" in st.session_state and "prompt" not in  st.session_state:
                 instruction = "You are an interviewer. Ask the following questions and after each answer, ask more deeply according to it." 
@@ -108,13 +106,20 @@ elif not st.session_state['is_interview_finished']:
                     input_variables=["history","input"],
                     template=template
                 )
-            st.write(st.session_state['is_interview_ongoing'])
             st.session_state['is_interview_ongoing'] = True
-            st.write(st.session_state['is_interview_ongoing'])
         else:
             st.write("Please fill in all the settings.")
 else:
-    st.write("模擬面接は終了です！お疲れ様でした！")
+    st.write("Well done!")
+    if 'eval' not in st.session_state:
+        st.session_state['eval'] = """{
+            'Accuracy': [95, 'Very accurate model.'],
+            'Precision': [90, 'High precision, few false positives.'],
+            'Recall': [92, 'Good recall, few false negatives.']
+        }"""
+
+    st.write(st.session_state['eval'])
+
 
 
 ###　ここのコンポーネントでは、ファイルから音声をストリーミングするのと、カメラで読み取った映像を（そのまま）流すことができる。　
@@ -154,7 +159,7 @@ if not st.session_state['is_interview_finished']:
 
     if main_webrtc_ctx.state.playing:
         if not st.session_state["is_started"]:
-            st.write("元気よく挨拶をしてみましょう！")
+            st.write("Let's say hello!")
         #  録音
         webrtc_ctx = webrtc_streamer(
             key="sendonly-audio",
@@ -165,8 +170,8 @@ if not st.session_state['is_interview_finished']:
             },
             media_stream_constraints={"audio": True},
             translations={
-                "start": "録音開始",
-                "stop": "録音終了",
+                "start": "Start speaking",
+                "stop": "Stop speaking",
             }
         )        
         st.session_state['is_recording'] = webrtc_ctx.state.playing
