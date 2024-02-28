@@ -8,23 +8,14 @@ import json
 import streamlit as st
 
 
-def generate_questions(recruitInfo, n_query, examples=None):
+def generate_questions(recruitInfo, n_query):
     instruction = f"You are a recruitment interviewer. Generate {n_query} questions which are likely to be asked in the interview at the following company. Please note that questions should be unique to the company:Please display only questions in a bullet point format."
 
-    template = """{instruction}\n{company}"""
+    template = instruction + "\n#company:\n{company}\n"
     prompt = PromptTemplate(
         template=template,
-        input_variables=["instruction","company"],
-    ).format_prompt(instruction=instruction, company=json.dumps(recruitInfo))
+        input_variables=["company"],
+    ).format_prompt(company=json.dumps(recruitInfo))
     llm = OpenAI(temperature=1)
     output = llm(prompt.to_string())
     return output
-
-# n_query = 5
-# st.session_state['company_attributes'] = {
-#     'name': "softbank",
-#     'position' : "Data Scientist",
-#     'required_personalities' : 'team player, self-starter, problem solver',
-# }
-
-# questions = generate_questions(st.session_state['company_attributes'], n_query)
