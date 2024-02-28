@@ -23,7 +23,10 @@ from services import save_audio_frames_in_memory, speech_to_text, get_state
 from generate_questions import generate_questions
 from generate_eval import generate_eval
 from interview_chat import generate_response
-from interview_eval import eval
+from interview_eval import evaluate
+import base64
+import streamlit.components.v1 as stc
+
 
 from states import StatesObject
 from common_questions import common_questions
@@ -33,7 +36,7 @@ ROOT = HERE.parent
 
 logger = logging.getLogger(__name__)
 
-
+st.set_page_config(layout="wide")
 
 #　録音周りの設定
 RECORD_DIR = Path("./records")
@@ -116,17 +119,35 @@ else:
 if not st.session_state['is_interview_finished']:
     state_obj = StatesObject()
     audio_frame_callback = AudioFrameCallback(state_obj)
-    main_webrtc_ctx = webrtc_streamer(
-        key="mock",
-        mode=WebRtcMode.SENDRECV,
-        video_frame_callback=video_frame_callback, # 画像をそのまま返す
-        audio_frame_callback=audio_frame_callback, # 音声ファイルからframeにして返す
-        rtc_configuration={
-            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-        },
-        desired_playing_state=st.session_state['is_interview_ongoing'],
-        media_stream_constraints={"video": True, "audio": True},
-)
+    # 横並びに2つのカラムを作成
+    col1, col2 = st.columns(2)
+    # 1つ目のカラムにWebRTCストリーマーを配置
+    with col1:
+        main_webrtc_ctx = webrtc_streamer(
+            key="mock",
+            mode=WebRtcMode.SENDRECV,
+            video_frame_callback=video_frame_callback, # 画像をそのまま返す
+            audio_frame_callback=audio_frame_callback, # 音声ファイルからframeにして返す
+            rtc_configuration={
+                "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+            },
+            desired_playing_state=st.session_state['is_interview_ongoing'],
+            media_stream_constraints={"video": True, "audio": True},
+    )
+
+    # 2つ目のカラムにGIF画像を表示（GIFのURLを指定してください）
+    with col2:
+        if main_webrtc_ctx.state.playing:
+            file_ = open("面接官をしている男性_gifmagazine-2.gif", "rb")
+            contents = file_.read()
+            data_url = base64.b64encode(contents).decode("utf-8")
+            file_.close()
+
+            st.markdown(
+                f'<img src="data:image/gif;base64,{data_url}" alt="Interviewer">',
+                unsafe_allow_html=True,
+                )
+            #mockで商用利用ではないのでOK
 
 
     if main_webrtc_ctx.state.playing:
