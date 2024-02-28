@@ -17,22 +17,18 @@ def evaluate(unique_rubric):#generate_evalの出力を代入
         streaming=True,
     )
     # Define common_rubric as specified
-    common_rubric = {
-        "Clarity": "Whether the opinion is expressed concisely",
-        "Comprehension": "Am I understanding the intent of the question correctly?"
-        }
+    common_rubric = """
+        Clarity: Whether the opinion is expressed concisely,
+        Comprehension: Am I understanding the intent of the question correctly?
+        """
     # Combine unique_rubric and common_rubric
-    rubric = {**unique_rubric, **common_rubric} 
+    rubric = unique_rubric + common_rubric
     
-    rubric_str = json.dumps(rubric, ensure_ascii=False, indent=2)  # Convert the combined rubric to a string for the template
-
-    template = """You are a specialist of job interview specialist. I would like you to mark an interview. Each interview is assigned a rating of 0 to 10, with 10 being the highest and 0 the lowest.
-    The interview is scored based on the following rubric.
-    {rubric}
-
+    template = """You are a specialist of job interview specialist. I would like you to mark an interview. Evaluate the interview from each point in the following rubric and give a grade and feedback on each item with an integer from 0 to 10 points.
     Interview:
     {history}
     """
+    + "\n#rubric:\n{rubric}\n"
 
     prompt = PromptTemplate(
         input_variables=['rubric', 'history'],

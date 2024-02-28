@@ -29,7 +29,6 @@ import streamlit.components.v1 as stc
 
 
 from states import StatesObject
-from common_questions import common_questions
 
 HERE = Path(__file__).parent
 ROOT = HERE.parent
@@ -67,11 +66,8 @@ def on_interview_finished():
         st.session_state['is_interview_ongoing'] = False
         logger.warning(st.session_state['is_interview_ongoing'])
         st.session_state['is_interview_finished'] = True
-        
-        # rubric = { 
-        
-        # }
-        # st.session_state['eval'] = eval(rubric, examples=None)
+     
+        # st.session_state['eval'] = evaluate(rubric, examples=None)
         
 if st.session_state['is_interview_ongoing']:
     st.button("面接終了", on_click=on_interview_finished)
@@ -95,13 +91,19 @@ elif not st.session_state['is_interview_finished']:
             st.write(st.session_state["questions"])
             ###　ユーザー設定
             if "questions" in st.session_state and "prompt" not in  st.session_state:
-                template = f"""You are an interviewer. Ask the following questions and after each answer, ask more deeply according to it.
-                                {st.session_state["questions"]}+{common_questions}""" + \
+                instruction = "You are an interviewer. Ask the following questions and after each answer, ask more deeply according to it." 
+                template = instruction + f"""
+                                ・Please introduce yourself.
+                                ・What is the reason for your interest in our company?
+                                ・What are your strengths and weaknesses?
+                                ・What are your future career goals?
+                                ・Can you provide an example of overcoming difficulties in past experiences?
+                                {st.session_state["questions"]}
+                                """ + \
                                 """Current conversation:
                                 {history}
-                                Interviewer: {input}
-                                Interviewee: """
-                questions = ""
+                                Interviewee: {input}
+                                Interviewer: """
                 st.session_state["prompt"] = PromptTemplate(
                     input_variables=["history","input"],
                     template=template
@@ -166,10 +168,8 @@ if not st.session_state['is_interview_finished']:
                 "start": "録音開始",
                 "stop": "録音終了",
             }
-        )
-        if not st.session_state["is_recording"]:
-            st.session_state['is_recording'] = webrtc_ctx.state.playing
-            st.session_state['count'] += 1
+        )        
+        st.session_state['is_recording'] = webrtc_ctx.state.playing
 
             
 
